@@ -16,6 +16,7 @@ const canvas = ref(null);
 const renderer = new THREE.WebGLRenderer();
 const cubes = [];
 const loader = new FileLoader();
+const clock = new THREE.Clock();
 
 let fragmentShader = ""; 
 loader.load('shaders/fragment.glsl',
@@ -29,13 +30,18 @@ loader.load('shaders/vertex.glsl',
     vertexShader = data;
   })
 );
+const uniforms = {
+  'u_time': {'value': 0.0}
+}
 
 const spawn_cube = () => {
   const geometry = new THREE.BoxGeometry(1, 1, 1);
   const material = new THREE.ShaderMaterial({
     vertexShader,
     fragmentShader,
+    uniforms,
     side: THREE.DoubleSide,
+    
   });
   const cube = new THREE.Mesh(geometry, material);
 
@@ -52,6 +58,7 @@ const spawn_cube = () => {
 
 const animate = () => {
   requestAnimationFrame(animate);
+  uniforms.u_time.value = clock.getElapsedTime();
   cubes.forEach(cube => {
     cube.rotation.x += 0.01;
     cube.rotation.y += 0.01;
