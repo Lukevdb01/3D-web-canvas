@@ -15,9 +15,28 @@ const canvas = ref(null);
 const renderer = new THREE.WebGLRenderer();
 const cubes = [];
 
+const vertexShader = `
+  varying vec3 vPosition;
+  void main() {
+    vPosition = position;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const fragmentShader = `
+  varying vec3 vPosition;
+  void main() {
+    gl_FragColor = vec4(abs(vPosition.xyz), 1.0);
+  }
+`;
+
 const spawn_cube = () => {
   const geometry = new THREE.BoxGeometry(1, 1, 1);
-  const material = new THREE.MeshStandardMaterial({ color: Math.random() * 0xFFFFFF });
+  const material = new THREE.ShaderMaterial({
+    vertexShader,
+    fragmentShader,
+    side: THREE.DoubleSide,
+  });
   const cube = new THREE.Mesh(geometry, material);
 
   const spread = 10; // hoe ver kubussen van elkaar kunnen liggen
