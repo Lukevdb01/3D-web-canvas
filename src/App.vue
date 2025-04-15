@@ -1,70 +1,49 @@
 <template>
-  <header>
-    <button @click="spawn_cube()">+</button>
-  </header>
   <main ref="canvas"></main>
 </template>
 
 <script setup>
 import { ref, onMounted } from "vue";
 import * as THREE from "three";
-import { FileLoader } from "three";
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import GUI from "three/examples/jsm/libs/lil-gui.module.min.js";
+import MinMaxGUIHelper from './guiHelper.js'
+import { OrbitControls } from "three/examples/jsm/Addons.js";
+
+const fov = 45;
+const aspect = 2; 
+const near = 0.1;
+const far = 100;
+const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+camera.position.set(0, 40, 20);
+
+const cameraHelper = new THREE.CameraHelper(camera);
 const scene = new THREE.Scene();
 const canvas = ref(null);
 const renderer = new THREE.WebGLRenderer();
-const cubes = [];
-const loader = new FileLoader();
-const clock = new THREE.Clock();
 
-let fragmentShader = ""; 
-loader.load('shaders/fragment.glsl',
-  ((data) => {
-    fragmentShader = data;
-  })
-);
-let vertexShader = "";
-loader.load('shaders/vertex.glsl',
-  ((data) => {
-    vertexShader = data;
-  })
-);
-const uniforms = {
-  'u_time': {'value': 0.0}
-}
-
-const spawn_cube = () => {
-  const geometry = new THREE.BoxGeometry(1, 1, 1);
-  const material = new THREE.ShaderMaterial({
-    vertexShader,
-    fragmentShader,
-    uniforms,
-    side: THREE.DoubleSide,
-    
-  });
-  const cube = new THREE.Mesh(geometry, material);
-
-  const spread = 10; // hoe ver kubussen van elkaar kunnen liggen
-  cube.position.set(
-    (Math.random() - 0.5) * spread,
-    (Math.random() - 0.5) * spread,
-    (Math.random() - 0.5) * spread
-  );
-
-  cubes.push(cube);
-  scene.add(cube);
-}
+const gltfLoader = new GLTFLoader();
+const gui = new GUI();
 
 const animate = () => {
   requestAnimationFrame(animate);
-  uniforms.u_time.value = clock.getElapsedTime();
-  cubes.forEach(cube => {
-    cube.rotation.x += 0.01;
-    cube.rotation.y += 0.01;
-  });
   renderer.render(scene, camera);
 }
+
+const updateCamera = () => {
+  camera.updateProjectionMatrix();
+}
+
+const updateRendererSize = () => {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+  renderer.setSize(width, height);
+};
+
+window.addEventListener('resize', updateRendererSize);
 
 onMounted(() => {
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -80,6 +59,20 @@ onMounted(() => {
   const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
   directionalLight.position.set(5, 10, 7.5); // x, y, z
   scene.add(directionalLight);
+  scene.add(cameraHelper);
+
+  gui.add(camera, 'fov', 1, 180).onChange(updateCamera);
+  const minMaxGUIHelper = new MinMaxGUIHelper(camera, 'near', 'far', 0.1);
+  gui.add(minMaxGUIHelper, 'min', 0.1, 50, 0.1).name('near').onChange(updateCamera);
+  gui.add(minMaxGUIHelper, 'max', 0.1, 50, 0.1).name('far').onChange(updateCamera);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 5, 0);
+  controls.update();
+
+  gltfLoader.load('models/Sponza/Sponza.gltf', function (gtlf) {
+    scene.add(gtlf.scene);
+  });
 
   canvas.value.appendChild(renderer.domElement);
 });
