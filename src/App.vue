@@ -8,27 +8,27 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import * as THREE from "three";
+import { FileLoader } from "three";
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const scene = new THREE.Scene();
 const canvas = ref(null);
 const renderer = new THREE.WebGLRenderer();
 const cubes = [];
+const loader = new FileLoader();
 
-const vertexShader = `
-  varying vec3 vPosition;
-  void main() {
-    vPosition = position;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-const fragmentShader = `
-  varying vec3 vPosition;
-  void main() {
-    gl_FragColor = vec4(abs(vPosition.xyz), 1.0);
-  }
-`;
+let fragmentShader = ""; 
+loader.load('shaders/fragment.glsl',
+  ((data) => {
+    fragmentShader = data;
+  })
+);
+let vertexShader = "";
+loader.load('shaders/vertex.glsl',
+  ((data) => {
+    vertexShader = data;
+  })
+);
 
 const spawn_cube = () => {
   const geometry = new THREE.BoxGeometry(1, 1, 1);
