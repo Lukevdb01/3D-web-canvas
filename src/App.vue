@@ -1,72 +1,52 @@
-<template>
-  <main ref="canvas"></main>
-</template>
-
 <script setup>
 import { ref, onMounted } from "vue";
 import * as THREE from "three";
-
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import GUI from "three/examples/jsm/libs/lil-gui.module.min.js";
-import MinMaxGUIHelper from './guiHelper.js'
 import { OrbitControls } from "three/examples/jsm/Addons.js";
+import render from "./render";
 
-const fov = 45;
-const aspect = 2; 
-const near = 0.1;
-const far = 100;
-const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+const fov = ref(45);
+const aspect = ref(2);
+const near = ref(0.1);
+const far = ref(100);
+const canvas = ref(null);
+
+const camera = new THREE.PerspectiveCamera(fov.value, aspect.value, near.value, far.value);
 camera.position.set(0, 40, 20);
 
 const cameraHelper = new THREE.CameraHelper(camera);
 const scene = new THREE.Scene();
-const canvas = ref(null);
-const renderer = new THREE.WebGLRenderer();
-
 const gltfLoader = new GLTFLoader();
-const gui = new GUI();
+const renderer = new render(scene, camera);
 
 const animate = () => {
   requestAnimationFrame(animate);
-  renderer.render(scene, camera);
+  renderer.get().render(scene, camera);
 }
 
 const updateCamera = () => {
+  camera.fov = fov.value;
+  camera.aspect = aspect.value;
+  camera.near = near.value;
+  camera.far = far.value;
   camera.updateProjectionMatrix();
-}
+};
 
 const updateRendererSize = () => {
   const width = window.innerWidth;
   const height = window.innerHeight;
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
-  renderer.setSize(width, height);
+  renderer.get().setSize(width, height);
 };
 
-window.addEventListener('resize', updateRendererSize);
-
 onMounted(() => {
-  renderer.setSize(window.innerWidth, window.innerHeight);
-
-  animate();
   camera.position.z = 5;
 
-  const color = 0xFFFFFF;
-  const intensity = 0.1;
-  const light = new THREE.AmbientLight(color, intensity);
-  scene.add(light);
-
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-  directionalLight.position.set(5, 10, 7.5); // x, y, z
-  scene.add(directionalLight);
   scene.add(cameraHelper);
+  renderer.pipeline();
 
-  gui.add(camera, 'fov', 1, 180).onChange(updateCamera);
-  const minMaxGUIHelper = new MinMaxGUIHelper(camera, 'near', 'far', 0.1);
-  gui.add(minMaxGUIHelper, 'min', 0.1, 50, 0.1).name('near').onChange(updateCamera);
-  gui.add(minMaxGUIHelper, 'max', 0.1, 50, 0.1).name('far').onChange(updateCamera);
-
-  const controls = new OrbitControls(camera, renderer.domElement);
+  const controls = new OrbitControls(camera, renderer.get().domElement);
   controls.target.set(0, 5, 0);
   controls.update();
 
@@ -74,6 +54,72 @@ onMounted(() => {
     scene.add(gtlf.scene);
   });
 
-  canvas.value.appendChild(renderer.domElement);
+  renderer.target(canvas);
+  updateRendererSize();
+  animate();
+
+  window.addEventListener('resize', updateRendererSize);
 });
 </script>
+
+<template>
+  <header>
+    <div class="controls">
+      <label>
+        FOV
+        <input type="range" v-model="fov" @input="updateCamera" min="1" max="180" />
+      </label>
+      <label>
+        Far
+        <input type="range" v-model="far" @input="updateCamera" min="0" max="1000" step="1" />
+      </label>
+      <label>
+        Near
+        <input type="range" v-model="near" @input="updateCamera" min="0" max="100" step="0.1" />
+      </label>
+      <label>
+        Aspect
+        <input type="range" v-model="aspect" @input="updateCamera" min="0.1" max="4" step="0.01" />
+      </label>
+    </div>
+  </header>
+  <main ref="canvas"></main>
+</template>
+
+<style scoped>
+header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.controls {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.controls label {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  font-weight: 500;
+  color: #333;
+  gap: 4px;
+}
+
+.controls input[type="range"] {
+  width: 120px;
+}
+</style>
+
