@@ -1,7 +1,6 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/Addons.js";
 import render from "./render";
 
@@ -13,15 +12,11 @@ const canvas = ref(null);
 
 const camera = new THREE.PerspectiveCamera(fov.value, aspect.value, near.value, far.value);
 camera.position.set(0, 40, 20);
-
-const cameraHelper = new THREE.CameraHelper(camera);
-const scene = new THREE.Scene();
-const gltfLoader = new GLTFLoader();
-const renderer = new render(scene, camera);
+const renderer = new render(camera);
 
 const animate = () => {
   requestAnimationFrame(animate);
-  renderer.get().render(scene, camera);
+  renderer.get_render().render(renderer.get_scene(), camera);
 }
 
 const updateCamera = () => {
@@ -37,23 +32,19 @@ const updateRendererSize = () => {
   const height = window.innerHeight;
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
-  renderer.get().setSize(width, height);
+  renderer.get_render().setSize(width, height);
 };
 
 onMounted(() => {
   camera.position.z = 5;
 
-  scene.add(cameraHelper);
   renderer.pipeline();
 
-  const controls = new OrbitControls(camera, renderer.get().domElement);
+  const controls = new OrbitControls(camera, renderer.get_render().domElement);
   controls.target.set(0, 5, 0);
   controls.update();
 
-  gltfLoader.load('models/Sponza/Sponza.gltf', function (gtlf) {
-    scene.add(gtlf.scene);
-  });
-
+  camera.updateProjectionMatrix();
   renderer.target(canvas);
   updateRendererSize();
   animate();
@@ -122,4 +113,3 @@ header {
   width: 120px;
 }
 </style>
-
